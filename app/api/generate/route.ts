@@ -4,10 +4,6 @@ import { prisma } from "@/lib/prisma";
 
 export const runtime = "nodejs";
 
-const client = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
-
 export async function POST(req: Request) {
   try {
     const session = await auth();
@@ -26,15 +22,13 @@ export async function POST(req: Request) {
       return new Response("Missing OPENAI_API_KEY", { status: 500 });
     }
 
+    const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+
     const user = await prisma.user.findUnique({
       where: { email: session.user.email },
     });
+    if (!user) return new Response("User not found", { status: 401 });
 
-    if (!user) {
-      return new Response("User not found", { status: 401 });
-    }
-
-    // 🔥 Template-aware system prompt
     const defaultSystem =
       "You are an expert B2B technology content writer. Output Markdown. Do not invent stats, quotes, customers, awards, certifications.";
 
@@ -52,7 +46,6 @@ export async function POST(req: Request) {
     });
 
     const text = r.output_text ?? "";
-
     return Response.json({ text });
   } catch (e: any) {
     console.error(e);

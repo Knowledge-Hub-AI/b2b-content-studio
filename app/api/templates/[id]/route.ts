@@ -1,11 +1,17 @@
+import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/authz";
 
 export const runtime = "nodejs";
 
-export async function PATCH(req: Request, ctx: { params: { id: string } }) {
+export async function PATCH(
+  req: NextRequest,
+  context: { params: Promise<{ id: string }> }
+) {
   const { user } = await requireUser();
   if (user.role !== "admin") return new Response("Forbidden", { status: 403 });
+
+  const { id } = await context.params;
 
   const body = (await req.json()) as Partial<{
     name: string;
@@ -15,7 +21,7 @@ export async function PATCH(req: Request, ctx: { params: { id: string } }) {
   }>;
 
   const updated = await prisma.template.update({
-    where: { id: ctx.params.id },
+    where: { id },
     data: {
       ...(body.name !== undefined ? { name: body.name } : {}),
       ...(body.assetType !== undefined ? { assetType: body.assetType } : {}),
